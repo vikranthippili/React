@@ -1,6 +1,8 @@
+
 async function makeBatchedAPICalls(urls, batchSize, maxRetries = 3) {
+  let overallResponse = [];
   try {
-    if (urls.length === 0) return; // Exit condition for recursion
+    if (urls.length === 0) return overallResponse; // Exit condition for recursion
 
     const batch = urls.slice(0, batchSize);
     const promises = batch.map(async (url) => {
@@ -19,18 +21,19 @@ async function makeBatchedAPICalls(urls, batchSize, maxRetries = 3) {
       if (result && result.error) {
         failedURLs.push(batch[index]); // Collect failed URLs
       } else {
-        console.log(result); // Log successful responses
+        overallResponse.push(result); // Accumulate successful responses
       }
     });
 
     // Retry failed URLs if there are any
     if (failedURLs.length > 0 && maxRetries > 0) {
-      console.log('Retrying failed batch:', failedURLs);
-      await makeBatchedAPICalls(failedURLs, batchSize, maxRetries - 1);
+      const retryResponses = await makeBatchedAPICalls(failedURLs, batchSize, maxRetries - 1);
+      overallResponse = overallResponse.concat(retryResponses);
     }
   } catch (error) {
     console.error('Error:', error);
   }
+  return overallResponse;
 }
 
 // Define an array of all URLs
@@ -40,4 +43,10 @@ const allURLs = ['url1', 'url2', 'url3', 'url4', 'url5', 'url6'];
 const batchSize = 3;
 
 // Call the function to start making the API calls in batches with retry logic
-makeBatchedAPICalls(allURLs, batchSize);
+makeBatchedAPICalls(allURLs, batchSize)
+  .then((overallResponse) => {
+    console.log('Overall response:', overallResponse);
+  })
+  .catch((error) => {
+    console.error('Error:', error);
+  });
